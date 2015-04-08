@@ -1,7 +1,7 @@
 /*
 
 Copyright (c) 2015 Leon Baker
-This projected is licensed under the terms of the LGPL-3.0 license.
+This projected is licensed under the terms of the MIT License.
 
 gomilter
 Go Bindings for libmilter
