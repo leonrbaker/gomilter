@@ -203,12 +203,12 @@ func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) C
   ctxptr := ctx2int(ctx)
   // Check if the host address is a regular ipv4 address
   if hostaddr.sa_family == C.AF_INET {
-    //fmt.Println(hostaddr.sa_data)
+    //LoggerPrintln(hostaddr.sa_data)
 
     // hostaddrin is a parallel data structure of the C type hostaddr
     //var hostaddrin *sockaddr_in
     hostaddrin := (*sockaddr_in)(unsafe.Pointer(hostaddr))
-    //fmt.Println(hostaddrin)
+    //LoggerPrintln(hostaddrin)
     ip_addr := make([]byte, 4)
     binary.LittleEndian.PutUint32(ip_addr, hostaddrin.sin_addr)
 
@@ -216,12 +216,12 @@ func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) C
     m := milter.(checkForConnect)
     code := m.Connect(ctxptr, C.GoString(hostname), fmt.Sprintf("%d.%d.%d.%d", ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3]))
     if milter.GetDebug() {
-      fmt.Printf("Connect callback returned: %d\n", code)
+      LoggerPrintf("Connect callback returned: %d\n", code)
     }   
     return C.sfsistat(code)
   }
   if milter.GetDebug() {
-    fmt.Println("hostaddr.sa_family value not implemented")
+    LoggerPrintln("hostaddr.sa_family value not implemented")
   }
   return C.SMFIS_CONTINUE
 }
@@ -231,7 +231,7 @@ func Go_xxfi_helo(ctx *C.SMFICTX, helohost *C.char) C.sfsistat {
   m := milter.(checkForHelo)
   code := m.Helo(ctx2int(ctx), C.GoString(helohost))
   if milter.GetDebug() {
-    fmt.Printf("Helo callback returned: %d\n", code)
+    LoggerPrintf("Helo callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -242,7 +242,7 @@ func Go_xxfi_envfrom(ctx *C.SMFICTX, argv **C.char) C.sfsistat {
   m := milter.(checkForEnvFrom)
   code := m.EnvFrom(ctx2int(ctx), cStringArrayToSlice(argv))
   if milter.GetDebug() {
-    fmt.Printf("EnvFrom callback returned: %d\n", code)
+    LoggerPrintf("EnvFrom callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -253,7 +253,7 @@ func Go_xxfi_envrcpt(ctx *C.SMFICTX, argv **C.char) C.sfsistat {
   m := milter.(checkForEnvRcpt)
   code := m.EnvRcpt(ctx2int(ctx), cStringArrayToSlice(argv))
   if milter.GetDebug() {
-    fmt.Printf("EnvRcpt callback returned: %d\n", code)
+    LoggerPrintf("EnvRcpt callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -263,7 +263,7 @@ func Go_xxfi_header(ctx *C.SMFICTX, headerf, headerv *C.char) C.sfsistat {
   m := milter.(checkForHeader)
   code := m.Header(ctx2int(ctx), C.GoString(headerf), C.GoString(headerv))
   if milter.GetDebug() {
-    fmt.Printf("Header callback returned: %d\n", code)
+    LoggerPrintf("Header callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -274,7 +274,7 @@ func Go_xxfi_eoh(ctx *C.SMFICTX) C.sfsistat {
   m := milter.(checkForEoh)
   code := m.Eoh(ctx2int(ctx))
   if milter.GetDebug() {
-    fmt.Printf("Eoh callback returned: %d\n", code)
+    LoggerPrintf("Eoh callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -291,7 +291,7 @@ func Go_xxfi_body(ctx *C.SMFICTX, bodyp *C.uchar, bodylen C.size_t) C.sfsistat {
   m := milter.(checkForBody)
   code := m.Body(ctx2int(ctx), b)
   if milter.GetDebug() {
-    fmt.Printf("Body callback returned: %d\n", code)
+    LoggerPrintf("Body callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -302,7 +302,7 @@ func Go_xxfi_eom(ctx *C.SMFICTX) C.sfsistat {
   m := milter.(checkForEom)
   code := m.Eom(ctx2int(ctx))
   if milter.GetDebug() {
-    fmt.Printf("Eom callback returned: %d\n", code)
+    LoggerPrintf("Eom callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -313,7 +313,7 @@ func Go_xxfi_abort(ctx *C.SMFICTX) C.sfsistat {
   m := milter.(checkForAbort)
   code := m.Abort(ctx2int(ctx))
   if milter.GetDebug() {
-    fmt.Printf("Abort callback returned: %d\n", code)
+    LoggerPrintf("Abort callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -324,7 +324,7 @@ func Go_xxfi_close(ctx *C.SMFICTX) C.sfsistat {
   m := milter.(checkForClose)
   code := m.Close(ctx2int(ctx))
   if milter.GetDebug() {
-    fmt.Printf("Close callback returned: %d\n", code)
+    LoggerPrintf("Close callback returned: %d\n", code)
   }   
   return C.sfsistat(code)
 }
@@ -595,10 +595,12 @@ func progress(ctx uintptr) int {
 
 // ********* Run the milter *********
 
+
+
 func Run(amilter Milter) int {
   milter = amilter
   if milter.GetDebug() {
-    fmt.Println ("Debugging enabled")
+    LoggerPrintf ("Debugging enabled")
   }
   
   // Declare an empty smfiDesc structure
@@ -609,7 +611,7 @@ func Run(amilter Milter) int {
   defer C.free(unsafe.Pointer(fname))
   smfilter.xxfi_name = fname
   if milter.GetDebug() {
-    fmt.Printf("Filter Name: %s\n", C.GoString(smfilter.xxfi_name))
+    LoggerPrintf("Filter Name: %s\n", C.GoString(smfilter.xxfi_name))
   }
 
   // Set version code
@@ -618,7 +620,7 @@ func Run(amilter Milter) int {
   // Set Flags
   smfilter.xxfi_flags = C.ulong(milter.GetFlags())
   if milter.GetDebug() {
-    fmt.Printf("Flags: 0x%b\n", smfilter.xxfi_flags)
+    LoggerPrintf("Flags: 0x%b\n", smfilter.xxfi_flags)
   }
 
   // Set Callbacks if they are implemented
@@ -626,117 +628,117 @@ func Run(amilter Milter) int {
   // Check if Connect method was implemented
   if _, ok := milter.(checkForConnect); ok {
     if milter.GetDebug() {
-      fmt.Println("Connect callback implemented")
+      LoggerPrintln("Connect callback implemented")
     }
     C.setConnect(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Connect callback not implemented")
+      LoggerPrintln("Connect callback not implemented")
     }
   }
   // Check if Helo method was implemented
   if _, ok := milter.(checkForHelo); ok {
     if milter.GetDebug() {
-      fmt.Println("Helo callback implemented")
+      LoggerPrintln("Helo callback implemented")
     }
     C.setHelo(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Helo callback not implemented")
+      LoggerPrintln("Helo callback not implemented")
     }
   }
   // Check if EnvFrom method was implemented
   if _, ok := milter.(checkForEnvFrom); ok {
     if milter.GetDebug() {
-      fmt.Println("EnvFrom callback implemented")
+      LoggerPrintln("EnvFrom callback implemented")
     }
     C.setEnvFrom(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("EnvFrom callback not implemented")
+      LoggerPrintln("EnvFrom callback not implemented")
     }
   }
   // Check if EnvRcpt method was implemented
   if _, ok := milter.(checkForEnvRcpt); ok {
     if milter.GetDebug() {
-      fmt.Println("EnvRcpt callback implemented")
+      LoggerPrintln("EnvRcpt callback implemented")
     }
     C.setEnvRcpt(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("EnvRcpt callback not implemented")
+      LoggerPrintln("EnvRcpt callback not implemented")
     }
   }
   // Check if Header method was implemented
   if _, ok := milter.(checkForHeader); ok {
     if milter.GetDebug() {
-      fmt.Println("Header callback implemented")
+      LoggerPrintln("Header callback implemented")
     }
     C.setHeader(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Header callback not implemented")
+      LoggerPrintln("Header callback not implemented")
     }
   }
   // Check if Eoh method was implemented
   if _, ok := milter.(checkForEoh); ok {
     if milter.GetDebug() {
-      fmt.Println("Eoh callback implemented")
+      LoggerPrintln("Eoh callback implemented")
     }
     C.setEoh(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Eoh callback not implemented")
+      LoggerPrintln("Eoh callback not implemented")
     }
   }
   // Check if Body method was implemented
   if _, ok := milter.(checkForBody); ok {
     if milter.GetDebug() {
-      fmt.Println("Body callback implemented")
+      LoggerPrintln("Body callback implemented")
     }
     C.setBody(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Body callback not implemented")
+      LoggerPrintln("Body callback not implemented")
     }
   }
   // Check if Eom method was implemented
   if _, ok := milter.(checkForEom); ok {
     if milter.GetDebug() {
-      fmt.Println("Eom callback implemented")
+      LoggerPrintln("Eom callback implemented")
     }
     C.setEom(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Eom callback not implemented")
+      LoggerPrintln("Eom callback not implemented")
     }
   }
   // Check if Abort method was implemented
   if _, ok := milter.(checkForAbort); ok {
     if milter.GetDebug() {
-      fmt.Println("Abort callback implemented")
+      LoggerPrintln("Abort callback implemented")
     }
     C.setAbort(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Abort callback not implemented")
+      LoggerPrintln("Abort callback not implemented")
     }
   }
   // Check if Close method was implemented
   if _, ok := milter.(checkForClose); ok {
     if milter.GetDebug() {
-      fmt.Println("Close callback implemented")
+      LoggerPrintln("Close callback implemented")
     }
     C.setClose(&smfilter)
   } else {
     if milter.GetDebug() {
-      fmt.Println("Close callback not implemented")
+      LoggerPrintln("Close callback not implemented")
     }
   }
 
   if milter.GetDebug() {
-    fmt.Println("smfilter:")
-    fmt.Println(smfilter)  
+    LoggerPrintln("smfilter:")
+    LoggerPrintln(fmt.Sprint(smfilter))
   }
 
   // Setup socket connection
@@ -753,24 +755,29 @@ func Run(amilter Milter) int {
   csocket := C.CString(socket)
   defer C.free(unsafe.Pointer(csocket))
   if code := C.smfi_setconn(csocket); code != 0 {
-    fmt.Printf("smfi_setconn failed: %d\n", code)
+    LoggerPrintf("smfi_setconn failed: %d\n", code)
   }
 
   // Register the filter
   if code := C.smfi_register(smfilter); code == C.MI_FAILURE {
-    fmt.Printf("smfi_register failed: %d\n", code)  
+    LoggerPrintf("smfi_register failed: %d\n", code)
   }
 
   // Hand control to libmilter
   if milter.GetDebug() {
-    fmt.Println("Handing over to libmilter")
+    LoggerPrintln("Handing over to libmilter")
   }
   result := C.smfi_main()
   if milter.GetDebug() {
-    fmt.Printf("smfi_main returned: %v\n", result)
+    LoggerPrintf("smfi_main returned: %v\n", result)
   }
   return int(result)
 }
 
+var LoggerPrintln func(...interface {})
+var LoggerPrintf func(string, ...interface {})
 
-
+func init() {
+  LoggerPrintln = func(i ...interface {}) { fmt.Println(i...) }
+  LoggerPrintf = func(i string, j ...interface {}) { fmt.Printf(i, j...) }
+}
