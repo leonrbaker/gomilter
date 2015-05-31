@@ -339,6 +339,7 @@ func GetSymVal(ctx uintptr, symname string) string {
 	return C.GoString(cval)
 }
 
+// See also: http://bit.ly/1HVWA9I
 func SetPriv(ctx uintptr, privatedata interface{}) int {
 	// privatedata seems to work for any data type
 	// Structs must have exported fields
@@ -592,6 +593,10 @@ func progress(ctx uintptr) int {
 }
 
 // ********* Run the milter *********
+
+func Stop() {
+	C.smfi_stop()
+}
 
 func Run(amilter Milter) int {
 	milter = amilter
