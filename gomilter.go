@@ -17,7 +17,7 @@ package gomilter
 #cgo LDFLAGS: -lmilter
 
 #include <stdlib.h>
-//#include <string.h>
+#include <arpa/inet.h>
 #include "libmilter/mfapi.h"
 #include "filter.h"
 
@@ -28,6 +28,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"net"
 	"os"
 	"reflect"
 	"strings"
@@ -101,7 +102,7 @@ func (m *MilterRaw) GetSocket() string {
 
 // ********* Callback checking types *********
 type checkForConnect interface {
-	Connect(ctx uintptr, hostname, ip string) (sfsistat int8)
+	Connect(ctx uintptr, hostname string, ip net.IP) (sfsistat int8)
 }
 
 type checkForHelo interface {
@@ -200,29 +201,37 @@ func GobDecode(buf []byte, data interface{}) error {
 //export Go_xxfi_connect
 func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) C.sfsistat {
 	ctxptr := ctx2int(ctx)
-	// Check if the host address is a regular ipv4 address
-	if hostaddr.sa_family == C.AF_INET {
-		//LoggerPrintln(hostaddr.sa_data)
+	var ip net.IP
 
-		// hostaddrin is a parallel data structure of the C type hostaddr
-		//var hostaddrin *sockaddr_in
+	if hostaddr.sa_family == C.AF_INET {
 		hostaddrin := (*sockaddr_in)(unsafe.Pointer(hostaddr))
-		//LoggerPrintln(hostaddrin)
 		ip_addr := make([]byte, 4)
 		binary.LittleEndian.PutUint32(ip_addr, hostaddrin.sin_addr)
+		ip = net.IPv4(ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3])
 
-		// Call our application's callback
-		m := milter.(checkForConnect)
-		code := m.Connect(ctxptr, C.GoString(hostname), fmt.Sprintf("%d.%d.%d.%d", ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3]))
+	} else if hostaddr.sa_family == C.AF_INET6 {
+		sa_in := (*C.struct_sockaddr_in6)(unsafe.Pointer(hostaddr))
+		var dst = make([]byte, 16)
+		C.inet_ntop(
+			C.int(hostaddr.sa_family),
+			unsafe.Pointer(&sa_in.sin6_addr),
+			(*C.char)(unsafe.Pointer(&dst)),
+			16)
+
+		ip = net.ParseIP(C.GoString((*C.char)(unsafe.Pointer(&dst))))
+	} else {
 		if milter.GetDebug() {
-			LoggerPrintf("Connect callback returned: %d\n", code)
+			LoggerPrintln("hostaddr.sa_family value not implemented")
 		}
-		return C.sfsistat(code)
+		ip = net.ParseIP("::")
 	}
+
+	m := milter.(checkForConnect)
+	code := m.Connect(ctxptr, C.GoString(hostname), ip)
 	if milter.GetDebug() {
-		LoggerPrintln("hostaddr.sa_family value not implemented")
+		LoggerPrintf("Connect callback returned: %d\n", code)
 	}
-	return C.SMFIS_CONTINUE
+	return C.sfsistat(code)
 }
 
 //export Go_xxfi_helo
