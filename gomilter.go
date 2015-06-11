@@ -17,6 +17,7 @@ package gomilter
 #cgo LDFLAGS: -lmilter
 
 #include <stdlib.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 #include "libmilter/mfapi.h"
 #include "filter.h"
