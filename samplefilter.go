@@ -40,7 +40,8 @@ func main() {
 	mymilter := new(Mymilter)
 	mymilter.FilterName = "TestFilter"
 	mymilter.Debug = true
-	mymilter.Flags = gomilter.AddHdrs | gomilter.AddRcpt
+	mymilter.Flags = gomilter.ADDHDRS | gomilter.ADDRCPT
+	mymilter.Socket = "unix:/var/milterattachcheck/socket"
 
 	// Start Milter
 	gomilter.Run(mymilter)
