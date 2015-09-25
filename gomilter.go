@@ -220,14 +220,7 @@ func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) C
 
 	} else if hostaddr.sa_family == C.AF_INET6 {
 		sa_in := (*C.struct_sockaddr_in6)(unsafe.Pointer(hostaddr))
-		var dst = make([]byte, 45)
-		C.inet_ntop(
-			C.int(hostaddr.sa_family),
-			unsafe.Pointer(&sa_in.sin6_addr),
-			(*C.char)(unsafe.Pointer(&dst)),
-			45)
-
-		ip = net.ParseIP(C.GoString((*C.char)(unsafe.Pointer(&dst))))
+		ip = net.IP(C.GoBytes(unsafe.Pointer(&sa_in.sin6_addr), 16))
 	} else {
 		if milter.GetDebug() {
 			logger.Println("hostaddr.sa_family value not implemented")
