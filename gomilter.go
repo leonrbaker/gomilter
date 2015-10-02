@@ -14,7 +14,7 @@ package gomilter
 
 /*
 
-#cgo LDFLAGS: -lmilter
+#cgo LDFLAGS: -L/usr/lib/libmilter -lmilter
 
 #include <stdlib.h>
 #include <netinet/in.h>
