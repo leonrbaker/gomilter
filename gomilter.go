@@ -30,12 +30,12 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"reflect"
 	"strings"
 	"unsafe"
-	"log"
 )
 
 type sockaddr_in struct {
@@ -824,4 +824,3 @@ func Run(amilter Milter) int {
 func Stop() {
 	C.smfi_stop()
 }
-
