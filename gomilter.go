@@ -212,7 +212,7 @@ func GobDecode(buf []byte, data interface{}) error {
 func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) (sfsistat C.sfsistat) {
 	defer func(sfsistat *C.sfsistat) {
 		if r := recover(); r != nil {
-			LoggerPrintf("Panic caught in Go_xxfi_connect(): %s", r)
+			logger.Printf("Panic caught in Go_xxfi_connect(): %s", r)
 			*sfsistat = 75 // tempfail
 		}
 	}(&sfsistat)
