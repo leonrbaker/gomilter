@@ -28,13 +28,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/gob"
+	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"reflect"
 	"strings"
 	"unsafe"
-	"log"
 )
 
 type sockaddr_in struct {
@@ -208,7 +209,14 @@ func GobDecode(buf []byte, data interface{}) error {
 // They are only called if they get registered but need to be defined anyway
 
 //export Go_xxfi_connect
-func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) C.sfsistat {
+func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) (sfsistat C.sfsistat) {
+	defer func(sfsistat *C.sfsistat) {
+		if r := recover(); r != nil {
+			logger.Printf("Panic caught in Go_xxfi_connect(): %s", r)
+			*sfsistat = 75 // tempfail
+		}
+	}(&sfsistat)
+
 	ctxptr := ctx2int(ctx)
 	var ip net.IP
 
@@ -350,14 +358,24 @@ func GetSymVal(ctx uintptr, symname string) string {
 	return C.GoString(cval)
 }
 
-// See also: http://bit.ly/1HVWA9I
-func SetPriv(ctx uintptr, privatedata interface{}) int {
+// Beware that if your struct is too large it will be discarded
+// without storing. You may want to simply provide a reference
+// to something you keep in a map or similar structure yourself.
+func SetPriv(ctx uintptr, privatedata interface{}) error {
 	// privatedata seems to work for any data type
 	// Structs must have exported fields
 
 	// Serialize Go privatedata into a byte slice
-	bytedata, _ := GobEncode(privatedata)
+	bytedata, err := GobEncode(privatedata)
+	if err != nil {
+		return err
+	}
 
+	return SetPrivBytes(ctx, bytedata)
+}
+
+// See also: http://bit.ly/1HVWA9I
+func SetPrivBytes(ctx uintptr, bytedata []byte) error {
 	// length and size
 	// length is a uint32 (usually 4 bytes)
 	// the length will be stored in front of the byte sequence
@@ -366,7 +384,7 @@ func SetPriv(ctx uintptr, privatedata interface{}) int {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, length)
 	if err != nil {
-		return -1
+		return errors.New("Could not write binary data into buffer: " + err.Error())
 	}
 	lengthbytes := buf.Bytes()
 
@@ -392,10 +410,29 @@ func SetPriv(ctx uintptr, privatedata interface{}) int {
 
 	// Call libmilter smfi_setpriv
 	type CtxPtr *C.struct_smfi_str
-	return int(C.smfi_setpriv(int2ctx(ctx), unsafe.Pointer(lenStart)))
+	res := int(C.smfi_setpriv(int2ctx(ctx), unsafe.Pointer(lenStart)))
+	if res != int(C.MI_SUCCESS) {
+		return errors.New("smfi_setpriv() returned a failure")
+	}
+
+	return nil
 }
 
-func GetPriv(ctx uintptr, privatedata interface{}) int {
+func GetPriv(ctx uintptr, privatedata interface{}) error {
+	databytes, err := GetPrivBytes(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = GobDecode(databytes, privatedata)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetPrivBytes(ctx uintptr) ([]byte, error) {
 	/*  Retrieve the private data stored by the milter
 	    Retrieving the data will release the memory allocated for it
 	    Don't try to retrieve it again unless you call SetPriv first
@@ -406,7 +443,7 @@ func GetPriv(ctx uintptr, privatedata interface{}) int {
 
 	// Make sure data has been set with a previous call to SetPriv
 	if CArray == nil {
-		return -1
+		return nil, errors.New("smfi_getpriv() call failed")
 	}
 
 	// Read uint32 size bytes from the start of the pointer
@@ -426,7 +463,7 @@ func GetPriv(ctx uintptr, privatedata interface{}) int {
 	buf := bytes.NewBuffer(lengthbytes)
 	err := binary.Read(buf, binary.BigEndian, &length)
 	if err != nil {
-		return -1
+		return nil, errors.New("Could not parse binary data")
 	}
 
 	// Read byte sequence of data
@@ -441,12 +478,7 @@ func GetPriv(ctx uintptr, privatedata interface{}) int {
 	C.smfi_setpriv(int2ctx(ctx), nil)
 
 	// Unserialize the data bytes back into a data structure
-	err = GobDecode(databytes, privatedata)
-	if err != nil {
-		return -1
-	}
-
-	return 0
+	return databytes, nil
 }
 
 func SetReply(ctx uintptr, rcode, xcode, message string) int {
@@ -792,4 +824,3 @@ func Run(amilter Milter) int {
 func Stop() {
 	C.smfi_stop()
 }
-
