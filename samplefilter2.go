@@ -7,9 +7,9 @@ Copyright (c) 2015 Leon Baker
 package main
 
 import (
+	m "github.com/leonrbaker/gomilter"
 	"log"
 	"os"
-	m "github.com/leonrbaker/gomilter"
 )
 
 type Mymilter struct {

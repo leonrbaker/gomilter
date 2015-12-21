@@ -29,12 +29,12 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"reflect"
 	"strings"
 	"unsafe"
-	"log"
 )
 
 type sockaddr_in struct {
@@ -208,7 +208,14 @@ func GobDecode(buf []byte, data interface{}) error {
 // They are only called if they get registered but need to be defined anyway
 
 //export Go_xxfi_connect
-func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) C.sfsistat {
+func Go_xxfi_connect(ctx *C.SMFICTX, hostname *C.char, hostaddr *C._SOCK_ADDR) (sfsistat C.sfsistat) {
+	defer func(sfsistat *C.sfsistat) {
+		if r := recover(); r != nil {
+			logger.Printf("Panic caught in Go_xxfi_connect(): %s", r)
+			*sfsistat = 75 // tempfail
+		}
+	}(&sfsistat)
+
 	ctxptr := ctx2int(ctx)
 	var ip net.IP
 
@@ -792,4 +799,3 @@ func Run(amilter Milter) int {
 func Stop() {
 	C.smfi_stop()
 }
-
