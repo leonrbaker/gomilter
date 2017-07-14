@@ -27,8 +27,8 @@ import "C"
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"fmt"
+	"github.com/vmihailenco/msgpack"
 	"log"
 	"net"
 	"os"
@@ -184,23 +184,13 @@ func cStringArrayToSlice(argv **C.char) (GoArgv []string) {
 }
 
 func GobEncode(data interface{}) ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err := encoder.Encode(data)
-	if err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
+	b, err := msgpack.Marshal(data)
+	return b, err
 }
 
 func GobDecode(buf []byte, data interface{}) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	err := decoder.Decode(data)
-	if err != nil {
-		return err
-	}
-	return nil
+	err := msgpack.Unmarshal(buf, &data)
+	return err
 }
 
 // ********* Filter Callback functions *********
