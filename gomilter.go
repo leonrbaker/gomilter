@@ -129,6 +129,10 @@ type checkForHeader interface {
 	Header(ctx uintptr, headerf, headerv string) (sfsistat int8)
 }
 
+type checkForData interface {
+	Data(ctx uintptr) (sfsistat int8)
+}
+
 type checkForEoh interface {
 	Eoh(ctx uintptr) (sfsistat int8)
 }
@@ -271,6 +275,16 @@ func Go_xxfi_envrcpt(ctx *C.SMFICTX, argv **C.char) C.sfsistat {
 	code := m.EnvRcpt(ctx2int(ctx), cStringArrayToSlice(argv))
 	if milter.GetDebug() {
 		logger.Printf("EnvRcpt callback returned: %d\n", code)
+	}
+	return C.sfsistat(code)
+}
+
+//export Go_xxfi_data
+func Go_xxfi_data(ctx *C.SMFICTX) C.sfsistat {
+	m := milter.(checkForData)
+	code := m.Data(ctx2int(ctx))
+	if milter.GetDebug() {
+		logger.Printf("Data callback returned: %d\n", code)
 	}
 	return C.sfsistat(code)
 }
@@ -667,6 +681,17 @@ func Run(amilter Milter) int {
 	} else {
 		if milter.GetDebug() {
 			logger.Println("Helo callback not implemented")
+		}
+	}
+	// Check if Data method was implemented
+	if _, ok := milter.(checkForData); ok {
+		if milter.GetDebug() {
+			logger.Println("Data callback implemented")
+		}
+		C.setData(&smfilter)
+	} else {
+		if milter.GetDebug() {
+			logger.Println("Data callback not implemented")
 		}
 	}
 	// Check if EnvFrom method was implemented

@@ -32,6 +32,10 @@ void setHeader(struct smfiDesc *smfilter) {
   smfilter->xxfi_header = &Go_xxfi_header;
 }
 
+void setData(struct smfiDesc *smfilter) {
+  smfilter->xxfi_data = &Go_xxfi_data;
+}
+
 void setEoh(struct smfiDesc *smfilter) {
   smfilter->xxfi_eoh = &Go_xxfi_eoh;
 }
