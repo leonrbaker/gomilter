@@ -70,6 +70,21 @@ const (
 	SETSYMLIST  = 0x00000100 // 100000000
 )
 
+// What the MTA can send/filter wants in protocol
+const (
+	SMFIP_NOCONNECT = 0x00000001   // MTA should not send connect info
+	SMFIP_NOHELO    = 0x00000002   // MTA should not send HELO info
+	SMFIP_NOMAIL    = 0x00000004   // MTA should not send MAIL info
+	SMFIP_NORCPT    = 0x00000008   // MTA should not send RCPT info
+	SMFIP_NOBODY    = 0x00000010   // MTA should not send body
+	SMFIP_NOHDRS    = 0x00000020   // MTA should not send headers
+	SMFIP_NOEOH     = 0x00000040   // MTA should not send EOH
+	SMFIP_NR_HDR    = 0x00000080   // No reply for headers
+	SMFIP_NOHREPL   = SMFIP_NR_HDR // No reply for headers
+	SMFIP_NOUNKNOWN = 0x00000100   // MTA should not send unknown commands
+	SMFIP_NODATA    = 0x00000200   // MTA should not send DATA
+)
+
 // Interface that must be implemented in order to use gomilter
 type Milter interface {
 	GetFilterName() string
