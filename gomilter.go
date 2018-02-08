@@ -70,6 +70,21 @@ const (
 	SETSYMLIST  = 0x00000100 // 100000000
 )
 
+// What the MTA can send/filter wants in protocol
+const (
+	SMFIP_NOCONNECT = 0x00000001   // MTA should not send connect info
+	SMFIP_NOHELO    = 0x00000002   // MTA should not send HELO info
+	SMFIP_NOMAIL    = 0x00000004   // MTA should not send MAIL info
+	SMFIP_NORCPT    = 0x00000008   // MTA should not send RCPT info
+	SMFIP_NOBODY    = 0x00000010   // MTA should not send body
+	SMFIP_NOHDRS    = 0x00000020   // MTA should not send headers
+	SMFIP_NOEOH     = 0x00000040   // MTA should not send EOH
+	SMFIP_NR_HDR    = 0x00000080   // No reply for headers
+	SMFIP_NOHREPL   = SMFIP_NR_HDR // No reply for headers
+	SMFIP_NOUNKNOWN = 0x00000100   // MTA should not send unknown commands
+	SMFIP_NODATA    = 0x00000200   // MTA should not send DATA
+)
+
 // Interface that must be implemented in order to use gomilter
 type Milter interface {
 	GetFilterName() string
@@ -127,6 +142,10 @@ type checkForEnvRcpt interface {
 
 type checkForHeader interface {
 	Header(ctx uintptr, headerf, headerv string) (sfsistat int8)
+}
+
+type checkForData interface {
+	Data(ctx uintptr) (sfsistat int8)
 }
 
 type checkForEoh interface {
@@ -271,6 +290,16 @@ func Go_xxfi_envrcpt(ctx *C.SMFICTX, argv **C.char) C.sfsistat {
 	code := m.EnvRcpt(ctx2int(ctx), cStringArrayToSlice(argv))
 	if milter.GetDebug() {
 		logger.Printf("EnvRcpt callback returned: %d\n", code)
+	}
+	return C.sfsistat(code)
+}
+
+//export Go_xxfi_data
+func Go_xxfi_data(ctx *C.SMFICTX) C.sfsistat {
+	m := milter.(checkForData)
+	code := m.Data(ctx2int(ctx))
+	if milter.GetDebug() {
+		logger.Printf("Data callback returned: %d\n", code)
 	}
 	return C.sfsistat(code)
 }
@@ -667,6 +696,17 @@ func Run(amilter Milter) int {
 	} else {
 		if milter.GetDebug() {
 			logger.Println("Helo callback not implemented")
+		}
+	}
+	// Check if Data method was implemented
+	if _, ok := milter.(checkForData); ok {
+		if milter.GetDebug() {
+			logger.Println("Data callback implemented")
+		}
+		C.setData(&smfilter)
+	} else {
+		if milter.GetDebug() {
+			logger.Println("Data callback not implemented")
 		}
 	}
 	// Check if EnvFrom method was implemented

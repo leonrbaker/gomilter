@@ -34,6 +34,7 @@ Milter callbacks are added by implementing methods for the struct with matching 
 * Helo
 * EnvFrom
 * EnvRcpt
+* Data
 * Header
 * Eoh
 * Body
